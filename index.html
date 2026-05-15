@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rogue Vessel — 3D FPS</title>
+    <meta name="description" content="Rogue Vessel: A sci-fi FPS with adaptive AI, built with BabylonJS">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+        #renderCanvas { width: 100%; height: 100%; display: block; outline: none; }
+
+        /* === HUD — TOP LEFT PANEL === */
+        #hud {
+            position: fixed; top: 16px; left: 16px;
+            display: flex; flex-direction: column; gap: 6px;
+            z-index: 10; pointer-events: none;
+        }
+        .hud-row {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 15px; color: #b0e0ff;
+            background: rgba(0, 10, 30, 0.7);
+            border-left: 3px solid rgba(80, 180, 255, 0.6);
+            padding: 5px 14px;
+            text-shadow: 0 0 8px rgba(80, 180, 255, 0.3);
+        }
+        .hud-row.ai-style {
+            color: #ffcc44;
+            border-left-color: rgba(255, 200, 60, 0.6);
+        }
+
+        /* === CROSSHAIR === */
+        #crosshair {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 10;
+        }
+        #crosshair .h { position: absolute; background: rgba(255,255,255,0.85); }
+        #crosshair .h.top    { width: 2px; height: 12px; left: -1px; top: -16px; }
+        #crosshair .h.bottom { width: 2px; height: 12px; left: -1px; top: 4px; }
+        #crosshair .h.left   { width: 12px; height: 2px; top: -1px; left: -16px; }
+        #crosshair .h.right  { width: 12px; height: 2px; top: -1px; left: 4px; }
+        #crosshair .dot { position: absolute; width: 3px; height: 3px; background: #ff3333; border-radius: 50%; left: -1.5px; top: -1.5px; }
+
+        /* === HEALTH BAR — BOTTOM LEFT === */
+        #healthBar {
+            position: fixed; bottom: 24px; left: 24px;
+            width: 260px; height: 28px;
+            background: rgba(0, 10, 30, 0.75);
+            border: 1px solid rgba(80, 180, 255, 0.25);
+            border-radius: 3px;
+            overflow: hidden; z-index: 10;
+        }
+        #healthFill {
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, #00cc66, #33ff99);
+            transition: width 0.3s ease, background 0.3s ease;
+        }
+        #healthLabel {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-family: 'Share Tech Mono', monospace;
+            font-size: 14px; font-weight: bold;
+            text-shadow: 0 0 6px rgba(0,0,0,0.9);
+        }
+
+        /* === AMMO BAR === */
+        #ammoBar {
+            position: fixed; bottom: 58px; left: 24px;
+            width: 200px; height: 20px;
+            background: rgba(0, 10, 30, 0.75);
+            border: 1px solid rgba(255, 204, 0, 0.25);
+            border-radius: 2px;
+            overflow: hidden; z-index: 10;
+        }
+        #ammoFill {
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, #ffcc00, #ffee66);
+            transition: width 0.1s linear, background 0.3s ease;
+        }
+        #ammoLabel {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-family: 'Share Tech Mono', monospace;
+            font-size: 13px; font-weight: bold;
+            text-shadow: 0 0 4px rgba(0,0,0,0.9);
+        }
+
+        /* === STAMINA BAR === */
+        #staminaBar {
+            position: fixed; bottom: 8px; left: 24px;
+            width: 180px; height: 10px;
+            background: rgba(0, 10, 30, 0.75);
+            border: 1px solid rgba(80, 180, 255, 0.25);
+            border-radius: 2px;
+            overflow: hidden; z-index: 10;
+        }
+        #staminaFill {
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, #0088ff, #66ccff);
+            transition: width 0.1s linear;
+        }
+
+        /* === DAMAGE FLASH === */
+        #damageFlash {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: radial-gradient(ellipse at center, transparent 30%, rgba(200,0,0,0.5) 100%);
+            pointer-events: none; opacity: 0;
+            transition: opacity 0.15s ease;
+            z-index: 5;
+        }
+
+        /* === START SCREEN === */
+        #startScreen {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: rgba(0, 5, 15, 0.92);
+            z-index: 100;
+        }
+        #startScreen h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 60px; font-weight: 900;
+            color: #ff3b3b; text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 12px;
+            margin-bottom: 50px;
+            text-shadow: 0 0 30px rgba(255, 60, 60, 0.5),
+                         0 0 60px rgba(255, 60, 60, 0.2);
+        }
+
+        /* === CONTROLS OVERLAY (TOP RIGHT) === */
+        #controlsOverlay {
+            position: fixed; top: 24%; right: 20px;
+            background: rgba(0, 10, 30, 0.6);
+            border: 1px solid rgba(80, 180, 255, 0.3);
+            border-radius: 4px;
+            padding: 15px 20px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 13px; color: #8899aa;
+            line-height: 2.0; text-align: left;
+            pointer-events: none; z-index: 10;
+            transition: opacity 1s ease;
+            box-shadow: 0 0 15px rgba(0, 100, 200, 0.15);
+        }
+        #controlsOverlay span {
+            color: #88bbdd; font-weight: bold;
+        }
+        #startBtn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px; font-weight: bold;
+            color: #000; background: #ff3b3b;
+            border: none; padding: 15px 40px;
+            cursor: pointer; border-radius: 4px;
+            letter-spacing: 2px; text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(255, 60, 60, 0.5);
+            transition: transform 0.1s, background 0.2s;
+        }
+        #startBtn:hover {
+            background: #ff5555;
+            transform: scale(1.05);
+        }
+        #startBtn:active {
+            transform: scale(0.95);
+        }
+
+        /* === MISSION OVERLAY === */
+        #missionOverlay {
+            position: fixed; top: 15%; left: 50%;
+            transform: translate(-50%, 0);
+            text-align: center; color: #fff;
+            pointer-events: none; opacity: 0;
+            transition: opacity 1s ease-in-out;
+            z-index: 20;
+            background: rgba(0, 10, 25, 0.85);
+            border: 1px solid #00ffcc;
+            padding: 30px; border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.3);
+        }
+        #missionOverlay h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: #ff3b3b; font-size: 32px;
+            margin-bottom: 15px; letter-spacing: 4px;
+        }
+        #missionOverlay p {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 18px; line-height: 1.6;
+            color: #b0e0ff;
+        }
+
+        /* === HEADSHOT === */
+        #headshotText {
+            position: fixed; top: 35%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 32px; color: #ff3b3b;
+            font-weight: 700; letter-spacing: 6px;
+            text-shadow: 0 0 20px rgba(255,60,60,0.8);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 10;
+        }
+
+        /* === HACK TEXT === */
+        #hackText {
+            position: fixed; top: 30%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px; color: #00ffcc;
+            font-weight: 700; letter-spacing: 4px;
+            text-shadow: 0 0 20px rgba(0,255,200,0.8);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 10;
+        }
+
+        /* === STUN TEXT === */
+        #stunText {
+            position: fixed; top: 38%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 18px; color: #ff8844;
+            text-shadow: 0 0 10px rgba(255,136,68,0.6);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 10;
+        }
+
+        /* === WAVE TEXT === */
+        #waveText {
+            position: fixed; top: 40%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px; color: #b0e0ff;
+            font-weight: 700; letter-spacing: 8px;
+            text-shadow: 0 0 20px rgba(80,180,255,0.5);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.5s ease;
+            z-index: 10;
+        }
+
+        /* === MINIMAP BORDER === */
+        #minimapBorder {
+            position: fixed;
+            top: 2%; right: 2%;
+            width: 20%; height: 20%;
+            border: 2px solid rgba(80, 180, 255, 0.35);
+            border-radius: 3px;
+            pointer-events: none; z-index: 10;
+            box-shadow: 0 0 15px rgba(0, 100, 200, 0.15) inset;
+        }
+        /* === HIT MARKER === */
+        #hitMarker {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px; height: 30px;
+            pointer-events: none; opacity: 0;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><line x1="20" y1="20" x2="40" y2="40" stroke="white" stroke-width="4"/><line x1="80" y1="20" x2="60" y2="40" stroke="white" stroke-width="4"/><line x1="20" y1="80" x2="40" y2="60" stroke="white" stroke-width="4"/><line x1="80" y1="80" x2="60" y2="60" stroke="white" stroke-width="4"/></svg>');
+            transition: opacity 0.1s, transform 0.1s;
+            z-index: 10;
+        }
+        .hit-active {
+            opacity: 1 !important;
+            transform: translate(-50%, -50%) scale(1.2) !important;
+        }
+
+        /* === DIRECTIONAL DAMAGE === */
+        #damageDir {
+            position: fixed; top: 50%; left: 50%;
+            width: 200px; height: 200px;
+            margin-left: -100px; margin-top: -100px;
+            border-radius: 50%;
+            pointer-events: none; opacity: 0;
+            box-shadow: inset 0 80px 40px -40px rgba(255, 0, 0, 0.8);
+            transition: opacity 0.2s ease-out;
+            z-index: 5;
+        }
+
+        /* === FLOATING SCORES === */
+        .floating-score {
+            position: absolute;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px; font-weight: bold;
+            color: #fff; text-shadow: 0 0 5px #00aaff;
+            pointer-events: none; z-index: 10;
+            animation: floatUp 1s forwards ease-out;
+        }
+        @keyframes floatUp {
+            0% { transform: translate(-50%, 0); opacity: 1; }
+            100% { transform: translate(-50%, -50px); opacity: 0; }
+        }
+
+        /* === PAUSE SCREEN === */
+        #pauseScreen {
+            display: none; position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 5, 15, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 30; flex-direction: column;
+            align-items: center; justify-content: center;
+            color: white; font-family: 'Orbitron', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+
+    <!-- HUD -->
+    <div id="crosshair">
+        <div class="h top"></div>
+        <div class="h bottom"></div>
+        <div class="h left"></div>
+        <div class="h right"></div>
+        <div class="dot"></div>
+    </div>
+
+    <div id="hud">
+        <div class="hud-row" id="scoreRow">SCORE 0</div>
+        <div class="hud-row" id="waveRow">WAVE 1 — 4 HOSTILES</div>
+        <div class="hud-row ai-style" id="aiRow" style="display:none">AI: STANDARD</div>
+        <div class="hud-row" id="codesRow" style="color:#00ffcc; border-left-color:rgba(0,255,200,0.6);">CODES 0 / 0</div>
+    </div>
+
+    <!-- Ammo Bar -->
+    <div id="ammoBar">
+        <div id="ammoFill"></div>
+        <div id="ammoLabel">AMMO 30 / 30</div>
+    </div>
+
+    <!-- Health Bar -->
+    <div id="healthBar">
+        <div id="healthFill"></div>
+        <div id="healthLabel">HP 100</div>
+    </div>
+    
+    <!-- Stamina Bar -->
+    <div id="staminaBar">
+        <div id="staminaFill"></div>
+    </div>
+
+    <!-- Effects -->
+    <div id="damageFlash"></div>
+    <div id="headshotText">HEADSHOT</div>
+    <div id="hackText">OVERRIDE COMPLETE</div>
+    <div id="stunText">NO CODES — ENEMY STUNNED</div>
+    <div id="waveText"></div>
+    <div id="minimapBorder"></div>
+
+    <div id="hitMarker"></div>
+    <div id="damageDir"></div>
+    <div id="floatingScoresContainer"></div>
+
+    <!-- Start Screen -->
+    <div id="startScreen">
+        <h1>ROGUE VESSEL</h1>
+        <div id="statsArea" style="font-family:'Share Tech Mono', monospace; font-size:18px; color:#88bbdd; line-height:1.8; text-align:center; margin-bottom:40px;"></div>
+        <button id="startBtn">START</button>
+    </div>
+
+    <div id="controlsOverlay" style="opacity: 0;">
+        <span>WASD</span> — Move<br>
+        <span>SHIFT</span> — Sprint<br>
+        <span>R</span> — Reload<br>
+        <span>MOUSE</span> — Look<br>
+        <span>CLICK</span> — Shoot<br>
+        <span>CODES</span> — Collect to hack<br>
+        <span>HEADSHOT</span> = 3× Damage
+    </div>
+
+    <div id="missionOverlay">
+        <h2>MISSION OBJECTIVE</h2>
+        <p>The ship's central AI has gone rogue.<br>
+        Collect <span style="color:#00ffcc">OVERRIDE CODES</span> to hack the corrupted<br>
+        security synthetics and retake the vessel.</p>
+    </div>
+
+    <div id="pauseScreen">
+        <h1>PAUSED</h1>
+        <div class="start">[ CLICK TO RESUME ]</div>
+    </div>
+
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
