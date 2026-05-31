@@ -96,13 +96,13 @@ playerMarker.isPickable = false;
 
 // === LIGHTS ===
 var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
-light.intensity = 0.9;
+light.intensity = 0.4;
 light.diffuse = new BABYLON.Color3(0.6, 0.65, 0.8);
 light.groundColor = new BABYLON.Color3(0.25, 0.25, 0.35);
 
 // Directional light with shadows
 var dirLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-1, -2, 1), scene);
-dirLight.intensity = 0.7;
+dirLight.intensity = 0.4;
 dirLight.diffuse = new BABYLON.Color3(0.9, 0.85, 1);
 dirLight.position = new BABYLON.Vector3(30, 40, -30);
 
@@ -140,7 +140,9 @@ var flickerPositions = [
     { x: -30, y: 6, z: 30, color: new BABYLON.Color3(1, 0.7, 0.3), range: 25 },
     { x: 35, y: 5, z: -15, color: new BABYLON.Color3(1, 0.4, 0.1), range: 20 },
     { x: -10, y: 7, z: -35, color: new BABYLON.Color3(0.8, 0.9, 1), range: 30 },
-    { x: 25, y: 4, z: 38, color: new BABYLON.Color3(1, 0.15, 0.05), range: 18 }
+    { x: 25, y: 4, z: 38, color: new BABYLON.Color3(1, 0.15, 0.05), range: 18 },
+    { x: -45, y: 8, z: -45, color: new BABYLON.Color3(1, 0.05, 0.02), range: 60 },
+    { x: 45, y: 8, z: 45, color: new BABYLON.Color3(1, 0.05, 0.02), range: 60 }
 ];
 for (var fi = 0; fi < flickerPositions.length; fi++) {
     var fp = flickerPositions[fi];
@@ -148,7 +150,8 @@ for (var fi = 0; fi < flickerPositions.length; fi++) {
     fl.diffuse = fp.color;
     fl.intensity = 0.8;
     fl.range = fp.range;
-    flickerLights.push({ light: fl, baseIntensity: 0.8, phase: Math.random() * Math.PI * 2, speed: 3 + Math.random() * 5 });
+    var isEmergency = fi >= 4;
+    flickerLights.push({ light: fl, baseIntensity: isEmergency ? 1.5 : 0.8, phase: Math.random() * Math.PI * 2, speed: isEmergency ? 1.2 : 3 + Math.random() * 5 });
 }
 
 // === SPARK PARTICLE SYSTEMS (near pipes/debris) ===
@@ -188,24 +191,6 @@ function initAudio() {
     masterGain = audioCtx.createGain();
     masterGain.gain.value = 0.8;
     masterGain.connect(audioCtx.destination);
-    
-    // === AMBIENT DRONE ===
-    var droneOsc1 = audioCtx.createOscillator();
-    var droneOsc2 = audioCtx.createOscillator();
-    var droneGain = audioCtx.createGain();
-    droneOsc1.type = "sine";
-    droneOsc2.type = "triangle";
-    droneOsc1.frequency.value = 55; // Low A
-    droneOsc2.frequency.value = 54.5; // Slight detune for phasing
-    droneGain.gain.value = 0.08;
-    
-    droneOsc1.connect(droneGain);
-    droneOsc2.connect(droneGain);
-    droneGain.connect(masterGain);
-    
-    droneOsc1.start();
-    droneOsc2.start();
-    
     audioInitialized = true;
 }
 
@@ -445,19 +430,7 @@ createWindow("winS1", 24, 6, 0, 18, -49.7, 0);
 createWindow("winE1", 12, 5, 49.7, 18, -15, Math.PI/2);
 createWindow("winW1", 12, 5, -49.7, 18, 15, Math.PI/2);
 
-// Cover objects (containers, crates, barriers)
-createWall("box1", 4, 2.5, 4, -30, 1.25, 25, boxMat);
-createWall("box2", 3, 2, 3, 35, 1, -30, boxMat);
-createWall("box3", 5, 3, 3, 10, 1.5, 35, boxMat);
-createWall("box4", 3, 2, 5, -35, 1, -15, boxMat);
-createWall("box5", 4, 2.5, 4, 38, 1.25, 20, boxMat);
-createWall("box6", 3, 2, 6, -10, 1, -35, boxMat);
-createWall("box7", 5, 2.5, 5, 18, 1.25, 8, boxMat);
-createWall("box8", 4, 2, 4, -18, 1, 5, boxMat);
-createWall("box9", 3, 3, 3, 20, 1.5, -20, boxMat);
-createWall("box10", 4, 2, 3, -25, 1, -30, boxMat);
-createWall("box11", 3, 2, 4, 5, 1, -18, boxMat);
-createWall("box12", 5, 2, 3, -12, 1, 30, boxMat);
+// (Boxes removed for cleaner gameplay — pillars provide enough cover)
 
 // Structural columns (spread around arena)
 createWall("col1", 3, wallHeight, 3, -20, wallHeight/2, -20, wallMat);
@@ -469,6 +442,8 @@ createWall("col6", 2, wallHeight, 2, -40, wallHeight/2, 0, wallMat);
 createWall("col7", 2, wallHeight, 2, 40, wallHeight/2, 0, wallMat);
 createWall("col8", 2, wallHeight, 2, 0, wallHeight/2, -40, wallMat);
 createWall("col9", 2, wallHeight, 2, 0, wallHeight/2, 40, wallMat);
+
+
 
 // === SPACESHIP DETAILS ===
 var pipeMat = new BABYLON.StandardMaterial("pipeMat", scene);
@@ -576,7 +551,7 @@ function isPositionClear(x, z) {
     // Check if position is inside any box or column by raycasting down
     var ray = new BABYLON.Ray(new BABYLON.Vector3(x, 10, z), BABYLON.Vector3.Down(), 12);
     var hit = scene.pickWithRay(ray, function(mesh) {
-        return mesh.name.startsWith("box") || mesh.name.startsWith("col") || mesh.name.startsWith("wall");
+        return mesh.name.startsWith("col") || mesh.name.startsWith("wall");
     });
     return !hit.hit;
 }
@@ -702,22 +677,12 @@ function getPlayerStyle() {
     return "normal";
 }
 
-// === PRE-LOAD 3D MODEL (local enemy.glb) ===
+// === PRE-LOAD 3D MODEL ===
 var enemyContainer = null;
 BABYLON.SceneLoader.LoadAssetContainer(
     "textures/", "enemy.glb", scene,
     function(container) {
         enemyContainer = container;
-        console.log("Enemy model loaded: " + container.meshes.length + " meshes");
-        // DEBUG: list all animation groups
-        for (var ai = 0; ai < container.animationGroups.length; ai++) {
-            var ag = container.animationGroups[ai];
-            console.log("  AnimGroup[" + ai + "]: " + ag.name + " | from=" + ag.from + " to=" + ag.to);
-            // Try to get FPS from first targeted animation
-            if (ag.targetedAnimations.length > 0) {
-                console.log("    FPS=" + ag.targetedAnimations[0].animation.framePerSecond);
-            }
-        }
     }
 );
 
@@ -727,23 +692,17 @@ BABYLON.SceneLoader.LoadAssetContainer(
     "models/", "blaster-b.glb", scene,
     function(container) {
         weaponContainer = container;
-        console.log("Weapon model loaded: " + container.meshes.length + " meshes");
         var weaponNode = container.instantiateModelsToScene(function(n) { return n + "_viewmodel"; }, false);
         weaponViewmodel = weaponNode.rootNodes[0];
         weaponViewmodel.parent = camera;
-        // Position bottom-right relative to camera
         weaponViewmodel.position = new BABYLON.Vector3(0.15, -0.3, 0.5);
         weaponViewmodel.scaling = new BABYLON.Vector3(1.5, 1.5, 1.5);
         weaponViewmodel.rotation = new BABYLON.Vector3(0, Math.PI, 0);
-        
-        // Make weapon meshes non-pickable and render on top
         var wMeshes = weaponViewmodel.getChildMeshes();
         for (var wm = 0; wm < wMeshes.length; wm++) {
             wMeshes[wm].isPickable = false;
             wMeshes[wm].renderingGroupId = 1;
-            console.log("  Weapon mesh: " + wMeshes[wm].name + " visible=" + wMeshes[wm].isVisible);
         }
-        console.log("Weapon attached to camera at pos: " + weaponViewmodel.position);
     }
 );
 
@@ -839,7 +798,6 @@ function createEnemy(x, z, isBoss) {
             var bounds = children[0].getHierarchyBoundingVectors(true);
             modelH = bounds.max.y - bounds.min.y;
             modelW = Math.max(bounds.max.x - bounds.min.x, bounds.max.z - bounds.min.z);
-            if (idx === 0) console.log("Enemy bounds: h=" + modelH.toFixed(2) + " w=" + modelW.toFixed(2));
         }
     }
 
@@ -901,6 +859,8 @@ function spawnBoss() {
     createEnemy(x, z, true);
 }
 
+var codeSpawnTimers = [];
+
 function startWave() {
     wave++;
     if (wave > 1) {
@@ -911,10 +871,25 @@ function startWave() {
     spawnWave(count);
     if (wave % 5 === 0) spawnBoss();
     
-    // Spawn override codes — one per enemy so all can be hacked
+    // Spawn override codes gradually — first 2 immediately, rest every 4 seconds
     codesNeeded = count + (wave % 5 === 0 ? 1 : 0);
-    for (var c = 0; c < codesNeeded; c++) {
+    var immediateCount = Math.min(2, codesNeeded);
+    for (var c = 0; c < immediateCount; c++) {
         spawnOverrideCode();
+    }
+    // Clear old timers
+    for (var t = 0; t < codeSpawnTimers.length; t++) {
+        clearTimeout(codeSpawnTimers[t]);
+    }
+    codeSpawnTimers = [];
+    // Schedule remaining codes
+    for (var c = immediateCount; c < codesNeeded; c++) {
+        (function(delay) {
+            var timer = setTimeout(function() {
+                if (gameActive) spawnOverrideCode();
+            }, delay);
+            codeSpawnTimers.push(timer);
+        })((c - immediateCount + 1) * 4000);
     }
     
     showWaveText(wave);
@@ -1297,13 +1272,6 @@ function startGame() {
     camera.attachControl(canvas, true);
     canvas.focus();
     canvas.requestPointerLock();
-    
-    // Show mission objective briefly
-    var overlay = document.getElementById("missionOverlay");
-    if (overlay) {
-        overlay.style.opacity = "1";
-        setTimeout(function() { overlay.style.opacity = "0"; }, 6000);
-    }
 
     startWave();
     updateInfo();
@@ -1327,6 +1295,7 @@ function showGameOver() {
     document.getElementById("startBtn").textContent = "RESTART";
     if (document.pointerLockElement) document.exitPointerLock();
 }
+
 
 // Handle pointer lock changes for Pause
 document.addEventListener("pointerlockchange", function() {
@@ -1395,11 +1364,11 @@ scene.registerBeforeRender(function() {
     }
     
     // Handle Sprinting & Stamina
-    if (isSprinting && playerStamina > 0 && playerBehavior.lastPosition && BABYLON.Vector3.Distance(camera.position, playerBehavior.lastPosition) > 0.01) {
-        playerStamina -= 0.5; // Drain stamina while moving & sprinting
+    if (isSprinting && playerStamina > 0 && moved > 0.01) {
+        playerStamina -= 0.5;
         camera.speed = 1.0;
     } else {
-        playerStamina += 0.2; // Recover stamina
+        playerStamina += 0.2;
         camera.speed = 0.5;
     }
     playerStamina = Math.max(0, Math.min(100, playerStamina));
@@ -1431,10 +1400,12 @@ scene.registerBeforeRender(function() {
     
     updateInfo();
 
-    // Track player movement for adaptive AI
-    // (moved to top of loop for bob logic)
+    // === CLAMP PLAYER INSIDE ARENA ===
+    var playerLimit = roomSize / 2 - 1.0;
+    camera.position.x = Math.max(-playerLimit, Math.min(playerLimit, camera.position.x));
+    camera.position.z = Math.max(-playerLimit, Math.min(playerLimit, camera.position.z));
 
-    // Update player marker on minimap (camera stays fixed at center)
+    // Update player marker on minimap
     playerMarker.position.x = camera.position.x;
     playerMarker.position.y = 10;
     playerMarker.position.z = camera.position.z;
@@ -1505,37 +1476,63 @@ scene.registerBeforeRender(function() {
 
             // Obstacle avoidance with ray
             var rayOrigin = enemyPos.add(new BABYLON.Vector3(0, 0.5, 0));
-            var ray = new BABYLON.Ray(rayOrigin, moveDir, 2.0);
-            var hit = scene.pickWithRay(ray, function(mesh) {
-                return mesh.name.startsWith("box") || mesh.name.startsWith("wall") || mesh.name.startsWith("col");
-            });
+            var obstacleFilter = function(mesh) {
+                return mesh.name.startsWith("wall") || mesh.name.startsWith("col");
+            };
+            var ray = new BABYLON.Ray(rayOrigin, moveDir, 3.0);
+            var hit = scene.pickWithRay(ray, obstacleFilter);
 
             if (hit.hit) {
-                var sideDir = new BABYLON.Vector3(-moveDir.z, 0, moveDir.x);
-                // Check side direction too
-                var sideRay = new BABYLON.Ray(rayOrigin, sideDir, 1.5);
-                var sideHit = scene.pickWithRay(sideRay, function(mesh) {
-                    return mesh.name.startsWith("box") || mesh.name.startsWith("wall") || mesh.name.startsWith("col");
-                });
-                if (!sideHit.hit) {
-                    enemyPos.addInPlace(sideDir.scale(speed));
+                // Try both sides and pick the clear one
+                var sideL = new BABYLON.Vector3(-moveDir.z, 0, moveDir.x);
+                var sideR = new BABYLON.Vector3(moveDir.z, 0, -moveDir.x);
+                
+                var rayL = new BABYLON.Ray(rayOrigin, sideL, 2.0);
+                var rayR = new BABYLON.Ray(rayOrigin, sideR, 2.0);
+                var hitL = scene.pickWithRay(rayL, obstacleFilter);
+                var hitR = scene.pickWithRay(rayR, obstacleFilter);
+                
+                var chosenDir;
+                if (!hitL.hit && !hitR.hit) {
+                    var dotL = sideL.x * dir.x + sideL.z * dir.z;
+                    chosenDir = dotL > 0 ? sideL : sideR;
+                } else if (!hitL.hit) {
+                    chosenDir = sideL;
+                } else if (!hitR.hit) {
+                    chosenDir = sideR;
+                } else {
+                    chosenDir = new BABYLON.Vector3((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2).normalize();
                 }
-                // else: stuck, don't move
+                enemyPos.addInPlace(chosenDir.scale(speed));
             } else {
                 enemyPos.addInPlace(moveDir.scale(speed));
             }
 
-            // Post-move collision check: cast short ray from new position
-            var checkRay = new BABYLON.Ray(
-                new BABYLON.Vector3(enemyPos.x, 0.5, enemyPos.z),
-                BABYLON.Vector3.Forward(), 0.6
-            );
-            var checkHit = scene.pickWithRay(checkRay, function(mesh) {
-                return mesh.name.startsWith("box") || mesh.name.startsWith("col");
-            });
-            if (checkHit.hit && checkHit.distance < 0.6) {
-                enemyPos.x = oldX;
-                enemyPos.z = oldZ;
+            // === HARD PILLAR COLLISION ===
+            // Push enemy out of any pillar they overlap with (AABB check)
+            var colPositions = [
+                { x: -20, z: -20, hw: 1.5 }, { x: 20, z: 20, hw: 1.5 },
+                { x: -20, z: 20, hw: 1.5 }, { x: 20, z: -20, hw: 1.5 },
+                { x: 0, z: 0, hw: 1.0 }, { x: -40, z: 0, hw: 1.0 },
+                { x: 40, z: 0, hw: 1.0 }, { x: 0, z: -40, hw: 1.0 },
+                { x: 0, z: 40, hw: 1.0 }
+            ];
+            var enemyRadius = 1.8;
+            for (var cp = 0; cp < colPositions.length; cp++) {
+                var col = colPositions[cp];
+                var margin = col.hw + enemyRadius;
+                var dx = enemyPos.x - col.x;
+                var dz = enemyPos.z - col.z;
+                if (Math.abs(dx) < margin && Math.abs(dz) < margin) {
+                    // Push out along the smallest overlap axis
+                    var overlapX = margin - Math.abs(dx);
+                    var overlapZ = margin - Math.abs(dz);
+                    if (overlapX < overlapZ) {
+                        enemyPos.x += (dx > 0 ? overlapX : -overlapX);
+                    } else {
+                        enemyPos.z += (dz > 0 ? overlapZ : -overlapZ);
+                    }
+                }
             }
 
             // Clamp enemy inside arena walls

@@ -168,30 +168,6 @@
             transform: scale(0.95);
         }
 
-        /* === MISSION OVERLAY === */
-        #missionOverlay {
-            position: fixed; top: 15%; left: 50%;
-            transform: translate(-50%, 0);
-            text-align: center; color: #fff;
-            pointer-events: none; opacity: 0;
-            transition: opacity 1s ease-in-out;
-            z-index: 20;
-            background: rgba(0, 10, 25, 0.85);
-            border: 1px solid #00ffcc;
-            padding: 30px; border-radius: 8px;
-            box-shadow: 0 0 30px rgba(0, 255, 204, 0.3);
-        }
-        #missionOverlay h2 {
-            font-family: 'Orbitron', sans-serif;
-            color: #ff3b3b; font-size: 32px;
-            margin-bottom: 15px; letter-spacing: 4px;
-        }
-        #missionOverlay p {
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 18px; line-height: 1.6;
-            color: #b0e0ff;
-        }
-
         /* === HEADSHOT === */
         #headshotText {
             position: fixed; top: 35%; left: 50%;
@@ -357,6 +333,7 @@
     <!-- Start Screen -->
     <div id="startScreen">
         <h1>ROGUE VESSEL</h1>
+        <p style="font-family:'Share Tech Mono', monospace; font-size:14px; color:#5599aa; max-width:500px; text-align:center; line-height:1.6; margin-bottom:30px; letter-spacing:1px;">The ship's central AI has gone rogue. Security synthetics are hostile.<br>Collect <span style="color:#00ffcc;">OVERRIDE CODES</span> to hack them and retake the vessel.</p>
         <div id="statsArea" style="font-family:'Share Tech Mono', monospace; font-size:18px; color:#88bbdd; line-height:1.8; text-align:center; margin-bottom:40px;"></div>
         <button id="startBtn">START</button>
     </div>
@@ -369,13 +346,6 @@
         <span>CLICK</span> — Shoot<br>
         <span>CODES</span> — Collect to hack<br>
         <span>HEADSHOT</span> = 3× Damage
-    </div>
-
-    <div id="missionOverlay">
-        <h2>MISSION OBJECTIVE</h2>
-        <p>The ship's central AI has gone rogue.<br>
-        Collect <span style="color:#00ffcc">OVERRIDE CODES</span> to hack the corrupted<br>
-        security synthetics and retake the vessel.</p>
     </div>
 
     <div id="pauseScreen">
