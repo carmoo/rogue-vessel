@@ -15,8 +15,7 @@ You are sent to retake the vessel. However, direct neutralization of the crew sy
 ---
 
 ## 📹 YouTube Demonstration
-- **Watch the Video:** `[INSERT YOUR YOUTUBE UNLISTED LINK HERE]`
-
+- **Watch the Video:** [https://youtu.be/vzv3dTXuy3g](https://youtu.be/vzv3dTXuy3g)
 ---
 
 ## 🎮 Game Controls
